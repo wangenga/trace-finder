@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.Classes.CommandValidator;
+import org.example.Classes.RulebookAnalyzer;
 import org.example.Exceptions.WrongNumberOfArguments;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -34,6 +35,7 @@ public class Main {
 
     public static void main(String[] args){
         CommandValidator cVal = new CommandValidator();
+        RulebookAnalyzer rbAnalyzer = new RulebookAnalyzer();
         //Count no. of arguments.
         if (args.length != 3){
             System.out.println("Ensure the number of arguments are 3");
@@ -46,8 +48,10 @@ public class Main {
         cVal.correctOrder();
         if (cVal.correctOrder() == true){
             //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
-
+            rbAnalyzer.getRulebookPath(args[1]);
         }
+
+        rbAnalyzer.validRulebook();
 
     }
 
