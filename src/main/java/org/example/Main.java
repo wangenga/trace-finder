@@ -1,5 +1,8 @@
 package org.example;
 
+import org.example.Classes.CommandValidator;
+import org.example.Exceptions.WrongNumberOfArguments;
+
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
@@ -29,7 +32,15 @@ public class Main {
 
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
-    public static void main(String[] args) {
-        System.out.println("Hello world");
+    public static void main(String[] args){
+        //Count no. of arguments.
+        if (args.length != 3){
+            System.out.println("Ensure the number of arguments are 3");
+        }
+        else {
+            System.out.println("Nice!");
+        }
+
     }
+
 }
