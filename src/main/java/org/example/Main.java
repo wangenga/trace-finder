@@ -1,8 +1,13 @@
 package org.example;
 
+import org.example.Classes.LogsReader;
+
+//import org.example.Classes.LogsReader;
+
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
+
     //Orchestrator. Hands and recieves data across classes and calls methods within each class.
     //As a user runs the program, it takes the input from the terminal and sends it to a method in CommandValidatorClass, maybe a setter method.
     //From that, the class is able to strip the command and ensure all arguments exist, and then prepares them into 3, the access log, the rulebook and the report.
@@ -30,6 +35,8 @@ public class Main {
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
     public static void main(String[] args) {
-        System.out.println("Hello world");
+     
+        LogsReader.logsReader();
+
     }
 }
