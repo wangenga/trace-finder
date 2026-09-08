@@ -28,4 +28,8 @@ public class Main {
     //The report is printed.
 
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
+
+    public static void main(String[] args) {
+        System.out.println("Hello world");
+    }
 }
