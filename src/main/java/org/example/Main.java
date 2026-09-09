@@ -45,13 +45,14 @@ public class Main {
             cVal.getArguments(args);
         }
 
-        cVal.correctOrder();
+
         if (cVal.correctOrder() == true){
             //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
             rbAnalyzer.getRulebookPath(args[1]);
         }
 
         rbAnalyzer.validRulebook();
+        rbAnalyzer.checkLevel();
 
     }
 
