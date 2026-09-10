@@ -26,6 +26,11 @@ public class LogsReader {
 
         Path logfilePath = Path.of(filePath);
         List<String> lines = Files.readAllLines(logfilePath);
+        return parseLines(lines);
+        
+    }
+
+    public static ParseResult parseLines(List<String> lines){
         List<LogEntry> validEntries = new ArrayList<>();
         List<LineIssue> malformedLines = new ArrayList<>();
 
