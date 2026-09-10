@@ -43,20 +43,30 @@ public class Main {
         //Count no. of arguments.
         if (args.length != 3){
             System.out.println("Ensure the number of arguments are 3");
+            System.exit(1);
         }
-        else {
-            System.out.println("Nice!");
-            cVal.getArguments(args);
-        }
+        cVal.getArguments(args);
 
 
-        if (cVal.correctOrder() == true){
+        if (!cVal.correctOrder()){
+            System.exit(1);
+        }
+
             //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
-            rbAnalyzer.getRulebookPath(args[1]);
+        rbAnalyzer.getRulebookPath(args[1]);
+        rbAnalyzer.validRulebook();
+
+        try {
+            LogsReader.ParseResult result = LogsReader.parse(args[0]);
+            System.out.println("Valid entries: " + result.validEntries().size());
+            System.out.println("Malformed lines: " + result.malformedLines().size());
+        } catch (IOException e) {
+            System.out.println("Error reading log file: " + e.getMessage());
+            System.exit(1);
         }
 
-        rbAnalyzer.validRulebook();
-        rbAnalyzer.checkLevel();
+        
+        //rbAnalyzer.checkLevel();
 
     }
 
