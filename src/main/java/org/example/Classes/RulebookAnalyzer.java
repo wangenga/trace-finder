@@ -93,7 +93,6 @@ public class RulebookAnalyzer {
     int infoCount = 0;
     int errorCount = 0;
     int alertCount = 0;
-    int unknownCount = 0;
 
     int delimeter1Index;
     int delimeter2Index;
@@ -125,8 +124,13 @@ public class RulebookAnalyzer {
                 infoCount++;
             }
             else {
-                unknownLogs.add(currentLog);
-                unknownCount++;
+                int unknownLogPos = i + 1;
+                StringBuilder sb = new StringBuilder();
+                sb.append("Line ");
+                sb.append(unknownLogPos);
+                sb.append(": ");
+                sb.append(currentLog);
+                unknownLogs.add(sb.toString());
             }
 
         }
@@ -143,7 +147,6 @@ public class RulebookAnalyzer {
         System.out.println("Info: " + infoCount);
         System.out.println("Error: " + errorCount);
         System.out.println("Alert: " + alertCount);
-        System.out.println("Unknown: " + unknownCount);
     }
 
 
@@ -158,7 +161,7 @@ public class RulebookAnalyzer {
         }
 
         for (String ip : flaggedIPsUnique){
-            int count = Collections.frequency(flaggedIpsList, flaggedIPsUnique);
+            int count = Collections.frequency(flaggedIpsList, ip);
             flaggedIPsCount.put(ip, count);
         }
 
@@ -171,5 +174,26 @@ public class RulebookAnalyzer {
         System.out.println(flaggedIPsCount);
     }
 
-
+    public int handWarnCount () {
+        return warnCount;
+    }
+    public int handInfoCount (){
+        return infoCount;
+    }
+    public int handErrorCount (){
+        return errorCount;
+    }
+    public int handAlertCount (){
+        return alertCount;
+    }
+    public List<String> handFlaggedEntries (){
+        return flaggedLogs;
+    }
+    public Map<String,Integer> handSuspiciousActivityByIp (){
+        return flaggedIPsCount;
+    }
+    public List<String> handUnknownLogs (){
+        return unknownLogs;
+    }
 }
+
