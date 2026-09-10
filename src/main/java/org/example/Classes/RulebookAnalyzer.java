@@ -1,11 +1,146 @@
 package org.example.Classes;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+
 public class RulebookAnalyzer {
     //Ensures rulebook can be accessed and read, else calls the exception
 
     //Recieves the dataset of well structured lines from the logs
     //Compares each line against the rulebook
-
     //Gives each line a score and stores that info in a dataset. eg a multidimensional array or sth
     //Hands this data to the main class.
+
+    String ruleBook;
+    public void getRulebookPath (String path){
+        System.out.println("The rulebook path is " + path);
+        ruleBook = path;
+    }
+
+    //Check if rulebook exists and has expected columns
+    public boolean validRulebook (){
+        if (Files.exists(Paths.get(ruleBook))){
+            //Expected columns:
+            List<String> expectedHeaders = Arrays.asList("level", "severity_score");
+
+            try (BufferedReader br = new BufferedReader(new FileReader(ruleBook))){
+                String header = br.readLine();
+
+                if(header != null){
+                    List<String> actualHeaders = Arrays.stream(header.split(","))
+                            .map(String::trim)
+                            .toList();
+
+                    if (expectedHeaders.equals(actualHeaders)){
+                        System.out.println("Nice! The rulebook has correct headers: " + actualHeaders);
+                        return true;
+                    }
+                    else {
+                        System.out.println("The column names/headers of this file do not match what is expected!!");
+                        return false;
+                    }
+                }
+                else {
+                    System.out.println("This csv file is empty!!");
+                    return false;
+                }
+            } catch (IOException e){
+                e.printStackTrace();
+                return false;
+            }
+        }
+        else{
+            System.out.println("This rulebook does not exist.");
+            return false;
+        }
+    }
+
+
+    //DUMMY STRUCTURED LOGS LIST:
+    List<String> approvedLogs = new ArrayList<>();
+    private void addDummyData (){
+        approvedLogs.add("2024-03-15 02:14:08 | info | 192.168.1.45 | /login | success");
+        approvedLogs.add("2024-03-15 02:14:33 | WARN | 203.0.113.42 | /login | failed");
+        approvedLogs.add("2024-03-15 02:14:35 | WARN | 203.0.113.42 | /login | failed");
+        approvedLogs.add("2024-03-15 02:14:38 | WARN | 203.0.113.42 | /login | failed");
+        approvedLogs.add("2024-03-15 02:15:02 | INFO | 203.0.113.42 | /login | success");
+        approvedLogs.add("2024-03-15 02:16:02 | ALERT | 203.0.113.42 | /etc/passwd | read");
+        approvedLogs.add("2024-03-15 03:55:30 | DEBUG | 192.168.1.20 | /health | ok");
+        approvedLogs.add("2024-03-15 07:45:00 | TRACE | 10.0.0.5 | /debug | trace");
+        approvedLogs.add("2024-03-15 11:00:00 | FATAL | 10.0.0.5 | /db | connection_lost");
+    }
+
+    public RulebookAnalyzer() {
+        addDummyData();
+    }
+
+    //CORRECTLY STRUCTURED LOGS HAVE 4 DELIMETERS. I NEED THE CHARACTERS BETWEEN DELIMETER 1 AND 2.
+
+    List<String> flaggedLogs = new ArrayList<>();
+    List<String> unknownLogs = new ArrayList<>();
+    public List<String> checkLevel (){
+        int delimeter1Index;
+        int delimeter2Index;
+
+        int warnCount = 0;
+        int infoCount = 0;
+        int errorCount = 0;
+        int alertCount = 0;
+        int unknownCount = 0;
+
+        for (int i = 0; i < approvedLogs.size(); i++) {
+            String currentLog = approvedLogs.get(i);
+
+            delimeter1Index = currentLog.indexOf("|" );
+            delimeter2Index = currentLog.indexOf("|" , delimeter1Index + 1);
+
+            String severity = currentLog.substring(delimeter1Index + 1, delimeter2Index).trim();
+            if (severity.equals("WARN") || severity.equals("ERROR") || severity.equals("ALERT")){
+                flaggedLogs.add(currentLog);
+                if (severity.equals("WARN")){
+                    warnCount ++;
+                }
+                else if (severity.equals("ERROR")){
+                    errorCount ++;
+                }
+                else {
+                    alertCount ++;
+                }
+            }
+            else if (severity.equals("INFO")){
+                infoCount++;
+            }
+            else {
+                unknownLogs.add(currentLog);
+                unknownCount++;
+            }
+
+        }
+        System.out.println("The flagged logs are: ");
+        for (String log : flaggedLogs) {
+            System.out.println(log);
+        }
+        System.out.println("The unknown logs are: ");
+        for (String log : unknownLogs) {
+            System.out.println(log);
+        }
+
+        System.out.println("Warn: " + warnCount);
+        System.out.println("Info: " + infoCount);
+        System.out.println("Error: " + errorCount);
+        System.out.println("Alert: " + alertCount);
+        System.out.println("Unknown: " + unknownCount);
+        return flaggedLogs;
+    }
+
+
+
+
 }
