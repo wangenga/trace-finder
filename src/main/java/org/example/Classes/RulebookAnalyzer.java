@@ -5,9 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 
 public class RulebookAnalyzer {
@@ -85,15 +83,20 @@ public class RulebookAnalyzer {
 
     List<String> flaggedLogs = new ArrayList<>();
     List<String> unknownLogs = new ArrayList<>();
-    public List<String> checkLevel (){
-        int delimeter1Index;
-        int delimeter2Index;
+    Set<String> flaggedIPs = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
+    //...each of these records appears in flagged logs.
+    int warnCount = 0;
+    int infoCount = 0;
+    int errorCount = 0;
+    int alertCount = 0;
+    int unknownCount = 0;
 
-        int warnCount = 0;
-        int infoCount = 0;
-        int errorCount = 0;
-        int alertCount = 0;
-        int unknownCount = 0;
+    int delimeter1Index;
+    int delimeter2Index;
+    int delimeter3Index;
+
+    public void checkLevel (){
+
 
         for (int i = 0; i < approvedLogs.size(); i++) {
             String currentLog = approvedLogs.get(i);
@@ -137,10 +140,20 @@ public class RulebookAnalyzer {
         System.out.println("Error: " + errorCount);
         System.out.println("Alert: " + alertCount);
         System.out.println("Unknown: " + unknownCount);
-        return flaggedLogs;
     }
 
 
+    public void suspiciousIPs (){
+        for (String flaggedLog : flaggedLogs){
+            delimeter3Index = flaggedLog.indexOf("|" , delimeter2Index + 1);
+            String flaggedIP = flaggedLog.substring(delimeter2Index + 1, delimeter3Index).trim();
+            flaggedIPs.add(flaggedIP);
+        }
+        System.out.println("The flagged IPs are: ");
+        for (String flaggedIp : flaggedIPs){
+            System.out.println(flaggedIp);
+        }
+    }
 
 
 }
