@@ -1,5 +1,7 @@
 package org.example;
 
+import java.io.IOException;
+
 import org.example.Classes.LogsReader;
 
 //import org.example.Classes.LogsReader;
@@ -36,7 +38,7 @@ public class Main {
 
     public static void main(String[] args) {
      
-        LogsReader.logsReader(args[0]);
+        
 
     }
 }

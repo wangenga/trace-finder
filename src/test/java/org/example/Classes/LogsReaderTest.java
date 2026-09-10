@@ -1,48 +1,125 @@
 package org.example.Classes;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 class LogsReaderTest {
     
     @Test
-    void confirmFileExists() {
-        PrintStream originalOut = System.out;
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    void cleanLineBecomesLogEntry() {
+        // Arrange
+        List<String> lines = List.of(
+            "2024-03-15 02:14:08 | INFO | 192.168.1.45 | /login | success"
+        );
 
-        LogsReader.logsReader("nonexistent-file.txt");
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
 
-        System.setOut(originalOut); // restore
-        assertTrue(outContent.toString().contains("Error reading log file"));
+        // Assert
+        assertEquals(1, result.validEntries().size());
+        assertTrue(result.malformedLines().isEmpty());
+
+        LogsReader.LogEntry entry = result.validEntries().get(0);
+        assertEquals("INFO", entry.level());
+        assertEquals("192.168.1.45", entry.sourceIp());
+        assertEquals("/login", entry.target());
+        assertEquals("success", entry.action());
     }
 
     @Test 
-    void fileIsTxt(){
-        PrintStream originalOut = System.out;
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    void missingFieldisMalformed(){
+        // Arrange
+        List<String> lines = List.of(
+            "2024-03-15 02:17:00 | WARN | 203.0.113.42 | /login"  // only 4 fields
+        );
 
-        LogsReader.logsReader("logs.tx");
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
 
-        System.setOut(originalOut); // restore
-        assertTrue(outContent.toString().contains("The file must be a .txt file."));
+        assertEquals(1, result.malformedLines().size());
+        assertTrue(result.validEntries().isEmpty());
+
+        LogsReader.LineIssue issue = result.malformedLines().get(0);
+        assertEquals(1, issue.lineNumber());
+        
+
     }
 
     @Test
-    void trueForFile() {
-        PrintStream originalOut = System.out;
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outContent));
+    void wrongDelimiter(){
+        // Arrange
+        List<String> lines = List.of(
+            "2024-03-15 02:17:14 / INFO / 192.168.1.45 / /home / accessed"
+        );
 
-        LogsReader.logsReader("logs.txt");
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
 
-        System.setOut(originalOut); // restore
-        assertFalse(outContent.toString().contains("Error reading log file"));
+        // Assert
+        assertEquals(1, result.malformedLines().size());
+        assertTrue(result.validEntries().isEmpty());
+
+        LogsReader.LineIssue issue = result.malformedLines().get(0);
+        assertEquals(1, issue.lineNumber());
     }
 
+    @Test 
+    void wrongNoLogFields(){
+         // Arrange
+        List<String> lines = List.of(
+            "2024-03-15 02:17:14 | Hello | INFO | 192.168.1.45 | /home | accessed"
+        );
 
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
+
+        // Assert
+        assertEquals(1, result.malformedLines().size());
+        assertTrue(result.validEntries().isEmpty());
+
+        LogsReader.LineIssue issue = result.malformedLines().get(0);
+        assertEquals(1, issue.lineNumber());
+    }
+
+    @Test 
+    void badTimeStamp(){
+         // Arrange
+        List<String> lines = List.of(
+            "not-a-timestamp | INFO | 192.168.1.45 | /home | accessed"
+        );
+
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
+
+        // Assert
+        assertEquals(1, result.malformedLines().size());
+        assertTrue(result.validEntries().isEmpty());
+
+        LogsReader.LineIssue issue = result.malformedLines().get(0);
+        assertEquals(1, issue.lineNumber());
+    }
+
+    @Test 
+    void emptyLineisMalformed(){
+         // Arrange
+        List<String> lines = List.of(
+            ""
+        );
+
+        // Act
+        LogsReader.ParseResult result = LogsReader.parseLines(lines);
+
+        // Assert
+        assertEquals(1, result.malformedLines().size());
+        assertTrue(result.validEntries().isEmpty());
+
+        LogsReader.LineIssue issue = result.malformedLines().get(0);
+        assertEquals(1, issue.lineNumber());
+    }
 }
