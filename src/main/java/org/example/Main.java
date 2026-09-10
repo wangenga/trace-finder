@@ -36,7 +36,7 @@ public class Main {
 
     public static void main(String[] args) {
      
-        LogsReader.logsReader();
+        LogsReader.logsReader(args[0]);
 
     }
 }
