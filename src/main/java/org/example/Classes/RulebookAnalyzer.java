@@ -83,8 +83,12 @@ public class RulebookAnalyzer {
 
     List<String> flaggedLogs = new ArrayList<>();
     List<String> unknownLogs = new ArrayList<>();
-    Set<String> flaggedIPs = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
+    List<String> flaggedIpsList = new ArrayList<>();
+    Set<String> flaggedIPsUnique = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
     //...each of these records appears in flagged logs.
+    Map<String, Integer> flaggedIPsCount = new HashMap<>();
+
+
     int warnCount = 0;
     int infoCount = 0;
     int errorCount = 0;
@@ -147,12 +151,24 @@ public class RulebookAnalyzer {
         for (String flaggedLog : flaggedLogs){
             delimeter3Index = flaggedLog.indexOf("|" , delimeter2Index + 1);
             String flaggedIP = flaggedLog.substring(delimeter2Index + 1, delimeter3Index).trim();
-            flaggedIPs.add(flaggedIP);
+            //We add the IP adresses to a normal list and to a unique list, and count how many times a unique record appears:
+            //**Probably not the most optimal solution.
+            flaggedIPsUnique.add(flaggedIP);
+            flaggedIpsList.add(flaggedIP);
         }
+
+        for (String ip : flaggedIPsUnique){
+            int count = Collections.frequency(flaggedIpsList, flaggedIPsUnique);
+            flaggedIPsCount.put(ip, count);
+        }
+
+
         System.out.println("The flagged IPs are: ");
-        for (String flaggedIp : flaggedIPs){
+        for (String flaggedIp : flaggedIPsUnique){
             System.out.println(flaggedIp);
         }
+
+        System.out.println(flaggedIPsCount);
     }
 
 
