@@ -65,8 +65,9 @@ public class Main {
             System.exit(1);
         }
 
-        
+
         //rbAnalyzer.checkLevel();
+        rbAnalyzer.suspiciousIPs();
 
     }
 

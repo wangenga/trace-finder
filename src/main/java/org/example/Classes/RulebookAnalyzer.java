@@ -5,9 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 
 public class RulebookAnalyzer {
@@ -85,15 +83,23 @@ public class RulebookAnalyzer {
 
     List<String> flaggedLogs = new ArrayList<>();
     List<String> unknownLogs = new ArrayList<>();
-    public List<String> checkLevel (){
-        int delimeter1Index;
-        int delimeter2Index;
+    List<String> flaggedIpsList = new ArrayList<>();
+    Set<String> flaggedIPsUnique = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
+    //...each of these records appears in flagged logs.
+    Map<String, Integer> flaggedIPsCount = new HashMap<>();
 
-        int warnCount = 0;
-        int infoCount = 0;
-        int errorCount = 0;
-        int alertCount = 0;
-        int unknownCount = 0;
+
+    int warnCount = 0;
+    int infoCount = 0;
+    int errorCount = 0;
+    int alertCount = 0;
+
+    int delimeter1Index;
+    int delimeter2Index;
+    int delimeter3Index;
+
+    public void checkLevel (){
+
 
         for (int i = 0; i < approvedLogs.size(); i++) {
             String currentLog = approvedLogs.get(i);
@@ -118,8 +124,13 @@ public class RulebookAnalyzer {
                 infoCount++;
             }
             else {
-                unknownLogs.add(currentLog);
-                unknownCount++;
+                int unknownLogPos = i + 1;
+                StringBuilder sb = new StringBuilder();
+                sb.append("Line ");
+                sb.append(unknownLogPos);
+                sb.append(": ");
+                sb.append(currentLog);
+                unknownLogs.add(sb.toString());
             }
 
         }
@@ -136,11 +147,53 @@ public class RulebookAnalyzer {
         System.out.println("Info: " + infoCount);
         System.out.println("Error: " + errorCount);
         System.out.println("Alert: " + alertCount);
-        System.out.println("Unknown: " + unknownCount);
-        return flaggedLogs;
     }
 
 
+    public void suspiciousIPs (){
+        for (String flaggedLog : flaggedLogs){
+            delimeter3Index = flaggedLog.indexOf("|" , delimeter2Index + 1);
+            String flaggedIP = flaggedLog.substring(delimeter2Index + 1, delimeter3Index).trim();
+            //We add the IP adresses to a normal list and to a unique list, and count how many times a unique record appears:
+            //**Probably not the most optimal solution.
+            flaggedIPsUnique.add(flaggedIP);
+            flaggedIpsList.add(flaggedIP);
+        }
+
+        for (String ip : flaggedIPsUnique){
+            int count = Collections.frequency(flaggedIpsList, ip);
+            flaggedIPsCount.put(ip, count);
+        }
 
 
+        System.out.println("The flagged IPs are: ");
+        for (String flaggedIp : flaggedIPsUnique){
+            System.out.println(flaggedIp);
+        }
+
+        System.out.println(flaggedIPsCount);
+    }
+
+    public int handWarnCount () {
+        return warnCount;
+    }
+    public int handInfoCount (){
+        return infoCount;
+    }
+    public int handErrorCount (){
+        return errorCount;
+    }
+    public int handAlertCount (){
+        return alertCount;
+    }
+    public List<String> handFlaggedEntries (){
+        return flaggedLogs;
+    }
+    public Map<String,Integer> handSuspiciousActivityByIp (){
+        return flaggedIPsCount;
+    }
+    public List<String> handUnknownLogs (){
+        return unknownLogs;
+    }
 }
+
