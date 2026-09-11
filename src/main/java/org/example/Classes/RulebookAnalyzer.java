@@ -16,49 +16,8 @@ public class RulebookAnalyzer {
     //Gives each line a score and stores that info in a dataset. eg a multidimensional array or sth
     //Hands this data to the main class.
 
-    String ruleBook;
-    public void getRulebookPath (String path){
-        System.out.println("The rulebook path is " + path);
-        ruleBook = path;
-    }
 
-    //Check if rulebook exists and has expected columns
-    public boolean validRulebook (){
-        if (Files.exists(Paths.get(ruleBook))){
-            //Expected columns:
-            List<String> expectedHeaders = Arrays.asList("level", "severity_score");
 
-            try (BufferedReader br = new BufferedReader(new FileReader(ruleBook))){
-                String header = br.readLine();
-
-                if(header != null){
-                    List<String> actualHeaders = Arrays.stream(header.split(","))
-                            .map(String::trim)
-                            .toList();
-
-                    if (expectedHeaders.equals(actualHeaders)){
-                        System.out.println("Nice! The rulebook has correct headers: " + actualHeaders);
-                        return true;
-                    }
-                    else {
-                        System.out.println("The column names/headers of this file do not match what is expected!!");
-                        return false;
-                    }
-                }
-                else {
-                    System.out.println("This csv file is empty!!");
-                    return false;
-                }
-            } catch (IOException e){
-                e.printStackTrace();
-                return false;
-            }
-        }
-        else{
-            System.out.println("This rulebook does not exist.");
-            return false;
-        }
-    }
 
 
     //CORRECTLY STRUCTURED LOGS HAVE 4 DELIMETERS. I NEED THE CHARACTERS BETWEEN DELIMETER 1 AND 2.
@@ -152,7 +111,7 @@ public class RulebookAnalyzer {
 
         System.out.println(flaggedIPsCount);
     }
-    //Rank IP address map
+
     //Move valid file path logic to commandValidator
     public Map<String, Integer> getStats(){
         stats.put("INFO", infoCount);
@@ -160,6 +119,7 @@ public class RulebookAnalyzer {
         stats.put("ERROR", errorCount);
         stats.put("ALERT", alertCount);
 
+        System.out.println(stats);
         return stats;
     }
 

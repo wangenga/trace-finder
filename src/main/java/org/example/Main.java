@@ -55,8 +55,8 @@ public class Main {
         }
 
             //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
-        rbAnalyzer.getRulebookPath(args[1]);
-        rbAnalyzer.validRulebook();
+        cVal.getRulebookPath(args[1]);
+        cVal.validRulebook();
 
         try {
             LogsReader.ParseResult result = LogsReader.parse(args[0]);
@@ -92,7 +92,7 @@ public class Main {
 
 
 
-        //rbAnalyzer.checkLevel();
+        rbAnalyzer.getStats();
         rbAnalyzer.suspiciousIPs();
         rbAnalyzer.getSuspiciousIp();
 
