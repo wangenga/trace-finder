@@ -61,24 +61,6 @@ public class RulebookAnalyzer {
     }
 
 
-    //DUMMY STRUCTURED LOGS LIST:
-    List<String> approvedLogs = new ArrayList<>();
-    private void addDummyData (){
-        approvedLogs.add("2024-03-15 02:14:08 | info | 192.168.1.45 | /login | success");
-        approvedLogs.add("2024-03-15 02:14:33 | WARN | 203.0.113.42 | /login | failed");
-        approvedLogs.add("2024-03-15 02:14:35 | WARN | 203.0.113.42 | /login | failed");
-        approvedLogs.add("2024-03-15 02:14:38 | WARN | 203.0.113.42 | /login | failed");
-        approvedLogs.add("2024-03-15 02:15:02 | INFO | 203.0.113.42 | /login | success");
-        approvedLogs.add("2024-03-15 02:16:02 | ALERT | 203.0.113.42 | /etc/passwd | read");
-        approvedLogs.add("2024-03-15 03:55:30 | DEBUG | 192.168.1.20 | /health | ok");
-        approvedLogs.add("2024-03-15 07:45:00 | TRACE | 10.0.0.5 | /debug | trace");
-        approvedLogs.add("2024-03-15 11:00:00 | FATAL | 10.0.0.5 | /db | connection_lost");
-    }
-
-    public RulebookAnalyzer() {
-        addDummyData();
-    }
-
     //CORRECTLY STRUCTURED LOGS HAVE 4 DELIMETERS. I NEED THE CHARACTERS BETWEEN DELIMETER 1 AND 2.
 
     List<String> flaggedLogs = new ArrayList<>();
@@ -98,11 +80,11 @@ public class RulebookAnalyzer {
     int delimeter2Index;
     int delimeter3Index;
 
-    public void checkLevel (){
+    public void checkLevel (List<String> validEntries){
 
 
-        for (int i = 0; i < approvedLogs.size(); i++) {
-            String currentLog = approvedLogs.get(i);
+        for (int i = 0; i < validEntries.size(); i++) {
+            String currentLog = validEntries.get(i);
 
             delimeter1Index = currentLog.indexOf("|" );
             delimeter2Index = currentLog.indexOf("|" , delimeter1Index + 1);

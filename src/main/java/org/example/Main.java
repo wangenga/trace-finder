@@ -1,6 +1,8 @@
 package org.example;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.example.Classes.CommandValidator;
 import org.example.Classes.LogsReader;
@@ -60,10 +62,23 @@ public class Main {
             LogsReader.ParseResult result = LogsReader.parse(args[0]);
             System.out.println("Valid entries: " + result.validEntries().size());
             System.out.println("Malformed lines: " + result.malformedLines().size());
+
+            //Converting List<LogEntry> into a List<String> and formatting the logs with a '|' delimeter
+            List<String> formattedLogs = result.validEntries().stream()
+                    .map(entry -> String.format("%s | %s | %s | %s | %s",
+                            entry.timestamp(),
+                            entry.level(),
+                            entry.sourceIp(),
+                            entry.target(),
+                            entry.action()))
+                    .toList();
+            //Calling the check level method:
+            rbAnalyzer.checkLevel(formattedLogs);
         } catch (IOException e) {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
         }
+
 
 
         //rbAnalyzer.checkLevel();
