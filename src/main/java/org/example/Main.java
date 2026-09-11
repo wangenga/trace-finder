@@ -72,8 +72,19 @@ public class Main {
                             entry.target(),
                             entry.action()))
                     .toList();
+
+            //Getting the actual line numbers for every log
+            List<String> numberedFormattedLogs = result.validEntries().stream()
+                    .map(entry -> String.format("Line %s: | %s | %s | %s | %s | %s",
+                            entry.lineNumber(), //Carries the OG line number.
+                            entry.timestamp(),
+                            entry.level(),
+                            entry.sourceIp(),
+                            entry.target(),
+                            entry.action()))
+                    .toList();
             //Calling the check level method:
-            rbAnalyzer.checkLevel(formattedLogs);
+            rbAnalyzer.checkLevel(formattedLogs, numberedFormattedLogs);
         } catch (IOException e) {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);

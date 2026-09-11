@@ -80,7 +80,7 @@ public class RulebookAnalyzer {
     int delimeter2Index;
     int delimeter3Index;
 
-    public void checkLevel (List<String> validEntries){
+    public void checkLevel (List<String> validEntries, List<String> numberedValidEntries){
 
 
         for (int i = 0; i < validEntries.size(); i++) {
@@ -106,13 +106,10 @@ public class RulebookAnalyzer {
                 infoCount++;
             }
             else {
-                int unknownLogPos = i + 1;
-                StringBuilder sb = new StringBuilder();
-                sb.append("Line ");
-                sb.append(unknownLogPos);
-                sb.append(": ");
-                sb.append(currentLog);
-                unknownLogs.add(sb.toString());
+                //Since numbered valid logs and valid logs are the same size, we can just replace the current log with the
+                //log at numberedValidLog[i] and add that into unknownLog.
+                currentLog = numberedValidEntries.get(i);
+                unknownLogs.add(currentLog);
             }
 
         }
