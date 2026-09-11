@@ -94,6 +94,7 @@ public class Main {
 
         //rbAnalyzer.checkLevel();
         rbAnalyzer.suspiciousIPs();
+        rbAnalyzer.getSuspiciousIp();
 
     }
 
