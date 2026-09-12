@@ -92,7 +92,9 @@ public class Main {
             System.exit(1);
         }
         System.out.println("\n----- REPORT SKELETON PREVIEW -----\n");
-        System.out.println(ReportGenerator.buildReport(result.malformedLines()));
+        System.out.println(ReportGenerator.buildReport(result.malformedLines(), 
+        rbAnalyzer.getStats(),
+        rbAnalyzer.getSuspiciousIp()));
 
 
 
@@ -108,6 +110,11 @@ public class Main {
         }
 
         cVal.getReportPath(args[2]);
+        ReportGenerator.buildReport(
+            result.malformedLines(), 
+            rbAnalyzer.getStats(),
+            rbAnalyzer.getSuspiciousIp()
+        );
         
     }
 
