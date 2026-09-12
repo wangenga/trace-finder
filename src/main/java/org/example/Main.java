@@ -41,23 +41,23 @@ public class Main {
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
     public static void main(String[] args) throws IOException {
-        CommandValidator cVal = new CommandValidator();
-        RulebookAnalyzer rbAnalyzer = new RulebookAnalyzer();
+        CommandValidator commandValidator = new CommandValidator();
+        RulebookAnalyzer rulebookAnalyzer = new RulebookAnalyzer();
         //Count no. of arguments.
         if (args.length != 3){
             System.out.println("Ensure the number of arguments are 3");
             System.exit(1);
         }
-        cVal.getArguments(args);
+        commandValidator.getArguments(args);
 
 
-        if (!cVal.correctOrder()){
+        if (!commandValidator.correctOrder()){
             System.exit(1);
         }
 
             //We hand over index 0 to LogsReader, 1 to CommandValidator and 2 to CommandValidator.
-        cVal.getRulebookPath(args[1]);
-        cVal.validRulebook();
+        commandValidator.getRulebookPath(args[1]);
+        commandValidator.validRulebook();
 
         LogsReader.ParseResult result = null;
         try {
@@ -86,19 +86,20 @@ public class Main {
                             entry.action()))
                     .toList();
             //Calling the check level method:
-            rbAnalyzer.checkLevel(formattedLogs, numberedFormattedLogs);
+            rulebookAnalyzer.checkLevel(formattedLogs, numberedFormattedLogs);
         } catch (IOException e) {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
         }
 
-        rbAnalyzer.suspiciousIPs();
+
+        rulebookAnalyzer.suspiciousIPs();
 
         String reportText = ReportGenerator.buildReport(
-            rbAnalyzer.getStats(),
-            rbAnalyzer.getFlaggedEntries(),
-            rbAnalyzer.getSuspiciousIp(),
-            rbAnalyzer.getUnknownLogs(),
+            rulebookAnalyzer.getStats(),
+            rulebookAnalyzer.getFlaggedEntries(),
+            rulebookAnalyzer.getSuspiciousIp(),
+            rulebookAnalyzer.getUnknownLogs(),
             result.malformedLines()
         );
 
@@ -111,8 +112,8 @@ public class Main {
             System.out.println("File name must be unique");
         }
 
-        cVal.getReportPath(args[2]);
-        cVal.writeReport(reportText);
+        commandValidator.getReportPath(args[2]);
+        commandValidator.writeReport(reportText);
     }
 
 }
