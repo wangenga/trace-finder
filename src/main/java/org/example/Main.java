@@ -2,6 +2,8 @@ package org.example;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.example.Classes.CommandValidator;
 import org.example.Classes.LogsReader;
@@ -38,7 +40,7 @@ public class Main {
 
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         CommandValidator cVal = new CommandValidator();
         RulebookAnalyzer rbAnalyzer = new RulebookAnalyzer();
         //Count no. of arguments.
@@ -53,15 +55,38 @@ public class Main {
             System.exit(1);
         }
 
-            //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
-        rbAnalyzer.getRulebookPath(args[1]);
-        rbAnalyzer.validRulebook();
+            //We hand over index 0 to LogsReader, 1 to CommandValidator and 2 to CommandValidator.
+        cVal.getRulebookPath(args[1]);
+        cVal.validRulebook();
 
         LogsReader.ParseResult result = null;
         try {
             result = LogsReader.parse(args[0]);
             System.out.println("Valid entries: " + result.validEntries().size());
             System.out.println("Malformed lines: " + result.malformedLines().size());
+
+            //Converting List<LogEntry> into a List<String> and formatting the logs with a '|' delimeter
+            List<String> formattedLogs = result.validEntries().stream()
+                    .map(entry -> String.format("%s | %s | %s | %s | %s",
+                            entry.timestamp(),
+                            entry.level(),
+                            entry.sourceIp(),
+                            entry.target(),
+                            entry.action()))
+                    .toList();
+
+            //Getting the actual line numbers for every log
+            List<String> numberedFormattedLogs = result.validEntries().stream()
+                    .map(entry -> String.format("Line %s: | %s | %s | %s | %s | %s",
+                            entry.lineNumber(), //Carries the OG line number.
+                            entry.timestamp(),
+                            entry.level(),
+                            entry.sourceIp(),
+                            entry.target(),
+                            entry.action()))
+                    .toList();
+            //Calling the check level method:
+            rbAnalyzer.checkLevel(formattedLogs, numberedFormattedLogs);
         } catch (IOException e) {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
@@ -70,8 +95,11 @@ public class Main {
         System.out.println(ReportGenerator.buildReport(result.malformedLines()));
 
 
-        //rbAnalyzer.checkLevel();
+
+        rbAnalyzer.getStats();
         rbAnalyzer.suspiciousIPs();
+        rbAnalyzer.getSuspiciousIp();
+
         
         File report = new File(args[2]);
 
@@ -79,6 +107,8 @@ public class Main {
             System.out.println("File name must be unique");
         }
 
+        cVal.getReportPath(args[2]);
+        
     }
 
 }
