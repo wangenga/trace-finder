@@ -54,7 +54,7 @@ public class Main {
             System.exit(1);
         }
 
-            //We hand over index 0 to LogsReader, 1 to RulebookAnalyzer and 2 to ReportGenerator.
+            //We hand over index 0 to LogsReader, 1 to CommandValidator and 2 to CommandValidator.
         cVal.getRulebookPath(args[1]);
         cVal.validRulebook();
 
@@ -95,6 +95,9 @@ public class Main {
         rbAnalyzer.getStats();
         rbAnalyzer.suspiciousIPs();
         rbAnalyzer.getSuspiciousIp();
+
+        //Third argument = report
+        cVal.getReportPath(args[2]);
 
     }
 
