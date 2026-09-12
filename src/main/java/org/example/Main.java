@@ -39,7 +39,7 @@ public class Main {
 
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         CommandValidator cVal = new CommandValidator();
         RulebookAnalyzer rbAnalyzer = new RulebookAnalyzer();
         //Count no. of arguments.
@@ -98,6 +98,7 @@ public class Main {
 
         //Third argument = report
         cVal.getReportPath(args[2]);
+        cVal.writeReport("Deeeeeze nuts");
 
     }
 
