@@ -77,7 +77,7 @@ public class Main {
 
             //Getting the actual line numbers for every log
             List<String> numberedFormattedLogs = result.validEntries().stream()
-                    .map(entry -> String.format("Line %s: | %s | %s | %s | %s | %s",
+                    .map(entry -> String.format("Line %s: %s | %s | %s | %s | %s",
                             entry.lineNumber(), //Carries the OG line number.
                             entry.timestamp(),
                             entry.level(),
@@ -91,18 +91,20 @@ public class Main {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
         }
-        System.out.println("\n----- REPORT SKELETON PREVIEW -----\n");
-        System.out.println(ReportGenerator.buildReport(result.malformedLines(), 
-        rbAnalyzer.getStats(),
-        rbAnalyzer.getSuspiciousIp()));
 
-
-
-        rbAnalyzer.getStats();
         rbAnalyzer.suspiciousIPs();
-        rbAnalyzer.getSuspiciousIp();
 
-        
+        String reportText = ReportGenerator.buildReport(
+            rbAnalyzer.getStats(),
+            rbAnalyzer.getFlaggedEntries(),
+            rbAnalyzer.getSuspiciousIp(),
+            rbAnalyzer.getUnknownLogs(),
+            result.malformedLines()
+        );
+
+        System.out.println("\n----- REPORT PREVIEW -----\n");
+        System.out.println(reportText); 
+
         File report = new File(args[2]);
 
         if (report.exists() && report.isFile()) {
@@ -110,12 +112,7 @@ public class Main {
         }
 
         cVal.getReportPath(args[2]);
-        ReportGenerator.buildReport(
-            result.malformedLines(), 
-            rbAnalyzer.getStats(),
-            rbAnalyzer.getSuspiciousIp()
-        );
-        
+        cVal.writeReport(reportText);
     }
 
 }

@@ -16,9 +16,11 @@ public class ReportGenerator {
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static String buildReport(
-        List<LogsReader.LineIssue> malformedLines,
         Map<String, Integer> activitySummary,
-        Map<String, Integer> susIp
+        List<String> flaggedEntries,
+        Map<String, Integer> susIp,
+        List<String> unknownlogs,
+        List<LogsReader.LineIssue> malformedLines
     ){
         StringBuilder sb = new StringBuilder();
 
@@ -36,7 +38,14 @@ public class ReportGenerator {
         sb.append("\n");
 
         sb.append("--- Flagged Entries ---\n");
-        sb.append("TODO\n\n");
+        if (flaggedEntries.isEmpty()){
+            sb.append("None found \n");
+        }else {
+            for (String flaggedlog : flaggedEntries) {
+                sb.append(flaggedlog).append('\n');
+            }
+        }
+        sb.append("\n");
 
         sb.append("--- Suspicious Activity by IP ---\n");
         if (susIp.isEmpty()){
@@ -49,7 +58,14 @@ public class ReportGenerator {
         sb.append("\n");
 
         sb.append("--- Unknown Patterns ---\n");
-        sb.append("TODO\n\n");
+        if (unknownlogs.isEmpty()){
+            sb.append("None found\n");
+        }else {
+            for (String unknown : unknownlogs){
+                sb.append(unknown).append("\n");
+            }
+        }
+        sb.append("\n");
 
         sb.append("--- Malformed Lines ---\n");
         if (malformedLines.isEmpty()){
