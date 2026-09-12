@@ -1,13 +1,14 @@
 package org.example;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.example.Classes.CommandValidator;
 import org.example.Classes.LogsReader;
+import org.example.Classes.ReportGenerator;
 import org.example.Classes.RulebookAnalyzer;
-import org.example.Exceptions.WrongNumberOfArguments;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -58,8 +59,9 @@ public class Main {
         cVal.getRulebookPath(args[1]);
         cVal.validRulebook();
 
+        LogsReader.ParseResult result = null;
         try {
-            LogsReader.ParseResult result = LogsReader.parse(args[0]);
+            result = LogsReader.parse(args[0]);
             System.out.println("Valid entries: " + result.validEntries().size());
             System.out.println("Malformed lines: " + result.malformedLines().size());
 
@@ -89,6 +91,8 @@ public class Main {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
         }
+        System.out.println("\n----- REPORT SKELETON PREVIEW -----\n");
+        System.out.println(ReportGenerator.buildReport(result.malformedLines()));
 
 
 
@@ -96,10 +100,15 @@ public class Main {
         rbAnalyzer.suspiciousIPs();
         rbAnalyzer.getSuspiciousIp();
 
-        //Third argument = report
-        cVal.getReportPath(args[2]);
-        cVal.writeReport("Deeeeeze nuts");
+        
+        File report = new File(args[2]);
 
+        if (report.exists() && report.isFile()) {
+            System.out.println("File name must be unique");
+        }
+
+        cVal.getReportPath(args[2]);
+        
     }
 
 }
