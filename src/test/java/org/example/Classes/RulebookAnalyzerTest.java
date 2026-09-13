@@ -44,6 +44,12 @@ public class RulebookAnalyzerTest {
         for (int i = 1; i <= logs.size(); i++) numbered.add("line-" + i);
         analyzer.checkLevel(logs, numbered);
     }
+
+    /** Builds a LogEntry matching the same shape as log(severity, ip). */
+    private LogsReader.LogEntry entry(int lineNumber, String severity, String ip) {
+        return new LogsReader.LogEntry(lineNumber, "2024-01-01 10:00:00", severity, ip, "action", "user");
+    }
+
     @Test
     void getRulebookPath_loadsValidCsv() throws IOException {
         loadRulebook("level,severity_score\nWARN,3\nERROR,5\nINFO,1\n");
@@ -211,7 +217,12 @@ public class RulebookAnalyzerTest {
                 log("ERROR", "2.2.2.2")
         ));
 
-        analyzer.suspiciousIPs();
+        analyzer.suspiciousIPs(List.of(
+            entry(1, "WARN",  "1.1.1.1"),
+            entry(2, "WARN",  "1.1.1.1"),
+            entry(3, "ERROR", "1.1.1.1"),
+            entry(4, "ERROR", "2.2.2.2")
+        ));
 
         Map<String, Integer> counts = analyzer.getSuspiciousIp();
         assertEquals(3, counts.get("1.1.1.1"));
@@ -227,7 +238,10 @@ public class RulebookAnalyzerTest {
                 log("WARN",  "1.1.1.1")   // flagged
         ));
 
-        analyzer.suspiciousIPs();
+        analyzer.suspiciousIPs(List.of(
+            entry(1, "DEBUG", "9.9.9.9"),
+            entry(2, "WARN",  "1.1.1.1")
+        ));
 
         Map<String, Integer> counts = analyzer.getSuspiciousIp();
         assertFalse(counts.containsKey("9.9.9.9"));
@@ -239,7 +253,9 @@ public class RulebookAnalyzerTest {
         loadRulebook("level,severity_score\nDEBUG,1\n");
 
         process(List.of(log("DEBUG", "1.1.1.1")));
-        analyzer.suspiciousIPs();
+        analyzer.suspiciousIPs(List.of(
+            entry(1, "DEBUG", "1.1.1.1")
+        ));
 
         assertTrue(analyzer.getSuspiciousIp().isEmpty());
     }
@@ -257,7 +273,14 @@ public class RulebookAnalyzerTest {
                 log("WARN", "3.3.3.3")
         ));
 
-        analyzer.suspiciousIPs();
+        analyzer.suspiciousIPs(List.of(
+            entry(1, "WARN", "1.1.1.1"),
+            entry(2, "WARN", "2.2.2.2"),
+            entry(3, "WARN", "2.2.2.2"),
+            entry(4, "WARN", "2.2.2.2"),
+            entry(5, "WARN", "3.3.3.3"),
+            entry(6, "WARN", "3.3.3.3")
+    ));
 
         List<String> orderedIps = new ArrayList<>(analyzer.getSuspiciousIp().keySet());
         assertEquals(List.of("2.2.2.2", "3.3.3.3", "1.1.1.1"), orderedIps);
@@ -283,5 +306,25 @@ public class RulebookAnalyzerTest {
         analyzer.checkLevel(valid, numbered);
 
         assertEquals(List.of("numbered-1"), analyzer.getUnknownLogs());
+    }
+
+    @Test
+    void suspiciousIPs_countsAllEntriesForIpNotJustFlaggedOnes() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
+
+        process(List.of(
+                log("WARN", "1.1.1.1"),   // flagged
+                log("INFO", "1.1.1.1"),   // not flagged, same IP
+                log("INFO", "1.1.1.1")    // not flagged, same IP
+        ));
+
+        analyzer.suspiciousIPs(List.of(
+                entry(1, "WARN", "1.1.1.1"),
+                entry(2, "INFO", "1.1.1.1"),
+                entry(3, "INFO", "1.1.1.1")
+        ));
+
+        // 1.1.1.1 is suspicious (has ≥1 flagged entry), and should show its TOTAL entry count (3), not just the flagged one (1)
+        assertEquals(3, analyzer.getSuspiciousIp().get("1.1.1.1"));
     }
 }

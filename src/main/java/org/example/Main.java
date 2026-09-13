@@ -97,8 +97,8 @@ public class Main {
             System.exit(1);
         }
 
-
-        rulebookAnalyzer.suspiciousIPs();
+        //pass the logentry list into analyser directly
+        rulebookAnalyzer.suspiciousIPs(result.validEntries());
 
         String reportText = ReportGenerator.buildReport(
             rulebookAnalyzer.getStats(),
@@ -111,11 +111,6 @@ public class Main {
         System.out.println("\n----- REPORT PREVIEW -----\n");
         System.out.println(reportText); 
 
-        File report = new File(args[2]);
-
-        if (report.exists() && report.isFile()) {
-            System.out.println("File name must be unique");
-        }
 
         commandValidator.getReportPath(args[2]);
         commandValidator.writeReport(reportText);

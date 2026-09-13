@@ -92,9 +92,6 @@ public class RulebookAnalyzer {
                             + " — severity_score is not a number: " + scoreStr);
                 }
             }
-
-            System.out.println("Rulebook loaded: " + rulebookContent);
-
         } catch (IOException e) {
             System.out.println("Could not read rulebook at " + rulebookPath);
             e.printStackTrace();
@@ -123,19 +120,10 @@ public class RulebookAnalyzer {
             }
 
         }
-
-        System.out.println("The flagged logs are: ");
-        for (Map.Entry<String, Integer> log : flaggedLogs) {
-            System.out.println(log.getKey());
-        }
-        System.out.println("The unknown logs are: ");
-        for (String log : unknownLogs) {
-            System.out.println(log);
-        }
     }
 
-
-        public void suspiciousIPs () {
+        //accepts list of valid enties from logreader
+        public void suspiciousIPs (List<LogsReader.LogEntry> validEntries) {
             for (Map.Entry<String, Integer> entry : flaggedLogs) {
                 String flaggedLog = entry.getKey();
                 int d1 = flaggedLog.indexOf("|");
@@ -146,21 +134,17 @@ public class RulebookAnalyzer {
                 //We add the IP adresses to a normal list and to a unique list, and count how many times a unique record appears:
                 //**Probably not the most optimal solution.
                 flaggedIPsUnique.add(flaggedIP);
-                flaggedIpsList.add(flaggedIP);
             }
 
-            for (String ip : flaggedIPsUnique) {
-                int count = Collections.frequency(flaggedIpsList, ip);
-                flaggedIPsCount.put(ip, count);
+            for (LogsReader.LogEntry log : validEntries) {
+                //the valid entries are already parsed
+                String ip = log.sourceIp();
+                if (flaggedIPsUnique.contains(ip)) {
+                    flaggedIPsCount.merge(ip, 1, Integer::sum);
+                }
+                
             }
 
-
-            System.out.println("The flagged IPs are: ");
-            for (String flaggedIp : flaggedIPsUnique) {
-                System.out.println(flaggedIp);
-            }
-
-            System.out.println(flaggedIPsCount);
         }
 
         public Map<String, Integer> getStats() {
@@ -173,7 +157,6 @@ public class RulebookAnalyzer {
                             LinkedHashMap::new   // preserves sorted order
                     ));
 
-            System.out.println("Stats (descending): " + sorted);
             return sorted;
         }
 
@@ -187,7 +170,6 @@ public class RulebookAnalyzer {
                             LinkedHashMap::new                // Guarantees the sorted order is kept
                     ));
 
-            System.out.println("Sorted map: " + sortedFlaggedIPsCount);
             return sortedFlaggedIPsCount;
         }
 
