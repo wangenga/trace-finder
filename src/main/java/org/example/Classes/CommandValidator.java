@@ -78,6 +78,10 @@ public class CommandValidator {
         }
     }
 
+    public String setRulebookPath (){
+        return ruleBook;
+    }
+
     String report;
     public void getReportPath (String path){
         System.out.println("The report path is " + path);

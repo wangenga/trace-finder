@@ -2,7 +2,11 @@ package org.example.Classes;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,6 +16,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class RulebookAnalyzerTest {
 
+    @TempDir
+    Path tempDir;
+
     private RulebookAnalyzer analyzer;
 
     @BeforeEach
@@ -19,137 +26,191 @@ public class RulebookAnalyzerTest {
         analyzer = new RulebookAnalyzer();
     }
 
-    /** Helper: builds a well-formed log line "date|severity|ip|action|user". */
+    /** Writes a rulebook CSV and points the analyzer at it. */
+    private void loadRulebook(String csvContent) throws IOException {
+        Path csv = tempDir.resolve("rules.csv");
+        Files.writeString(csv, csvContent);
+        analyzer.getRulebookPath(csv.toString());
+    }
+
+    /** Builds a well-formed log line: field0|severity|ip|field3|field4 */
     private String log(String severity, String ip) {
         return "2024-01-01 10:00:00|" + severity + "|" + ip + "|action|user";
     }
 
-    @Test
-    void checkLevel_classifiesWarnErrorAlertAndInfo() {
-        List<String> valid = List.of(
-                log("WARN",  "1.1.1.1"),
-                log("INFO",  "2.2.2.2"),
-                log("ERROR", "3.3.3.3"),
-                log("ALERT", "4.4.4.4")
-        );
-        List<String> numbered = List.of("1", "2", "3", "4");
-
-        analyzer.checkLevel(valid, numbered);
-
-        // Only WARN, ERROR, ALERT go to flaggedLogs
-        assertEquals(3, analyzer.getFlaggedEntries().size());
-        assertTrue(analyzer.getFlaggedEntries().contains(log("WARN",  "1.1.1.1")));
-        assertTrue(analyzer.getFlaggedEntries().contains(log("ERROR", "3.3.3.3")));
-        assertTrue(analyzer.getFlaggedEntries().contains(log("ALERT", "4.4.4.4")));
-        assertTrue(analyzer.getUnknownLogs().isEmpty());
-
-        Map<String, Integer> stats = analyzer.getStats();
-        assertEquals(1, stats.get("WARN"));
-        assertEquals(1, stats.get("INFO"));
-        assertEquals(1, stats.get("ERROR"));
-        assertEquals(1, stats.get("ALERT"));
+    /** Runs checkLevel with an auto-generated "numbered" list of the same size. */
+    private void process(List<String> logs) {
+        List<String> numbered = new ArrayList<>();
+        for (int i = 1; i <= logs.size(); i++) numbered.add("line-" + i);
+        analyzer.checkLevel(logs, numbered);
     }
-
     @Test
-    void checkLevel_infoLogsAreNotFlagged() {
-        List<String> valid = List.of(
-                log("INFO", "1.1.1.1"),
-                log("INFO", "2.2.2.2")
-        );
-        List<String> numbered = List.of("1", "2");
+    void getRulebookPath_loadsValidCsv() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nERROR,5\nINFO,1\n");
 
-        analyzer.checkLevel(valid, numbered);
-
-        assertTrue(analyzer.getFlaggedEntries().isEmpty());
-        assertEquals(2, analyzer.getStats().get("INFO"));
-    }
-
-    @Test
-    void checkLevel_unknownSeverityGoesToUnknownLogs() {
-        List<String> valid = List.of(log("MYSTERY", "1.1.1.1"));
-        List<String> numbered = List.of("Line #42: MYSTERY entry");
-
-        analyzer.checkLevel(valid, numbered);
-
-        assertTrue(analyzer.getFlaggedEntries().isEmpty());
-        assertEquals(1, analyzer.getUnknownLogs().size());
-        // The numbered version must be stored, NOT the original
-        assertEquals("Line #42: MYSTERY entry", analyzer.getUnknownLogs().get(0));
-        // Nothing was counted
-        Map<String, Integer> stats = analyzer.getStats();
-        assertEquals(0, stats.get("WARN"));
-        assertEquals(0, stats.get("ERROR"));
-        assertEquals(0, stats.get("ALERT"));
-        assertEquals(0, stats.get("INFO"));
-    }
-
-    @Test
-    void checkLevel_severityIsTrimmedBeforeMatching() {
-        List<String> valid = List.of("a| WARN |1.1.1.1|x|y");
-        List<String> numbered = List.of("1");
-
-        analyzer.checkLevel(valid, numbered);
-
+        // The map was populated — verified indirectly through checkLevel
+        process(List.of(log("WARN", "1.1.1.1")));
         assertEquals(1, analyzer.getFlaggedEntries().size());
         assertEquals(1, analyzer.getStats().get("WARN"));
     }
 
     @Test
-    void checkLevel_emptyListProducesZeroCounts() {
-        analyzer.checkLevel(Collections.emptyList(), Collections.emptyList());
+    void getRulebookPath_throwsWhenHeadersAreWrong() throws IOException {
+        Path csv = tempDir.resolve("bad.csv");
+        Files.writeString(csv, "level,score\nWARN,3\n");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> analyzer.getRulebookPath(csv.toString()));
+    }
+
+    @Test
+    void getRulebookPath_acceptsHeadersWithSpaces() throws IOException {
+        Path csv = tempDir.resolve("spaced.csv");
+        Files.writeString(csv, " level , severity_score \nWARN,3\n");
+
+        assertDoesNotThrow(() -> analyzer.getRulebookPath(csv.toString()));
+    }
+
+    @Test
+    void getRulebookPath_handlesEmptyFile() throws IOException {
+        Path csv = tempDir.resolve("empty.csv");
+        Files.createFile(csv);
+
+        // Should not throw — just prints "Rulebook is empty."
+        assertDoesNotThrow(() -> analyzer.getRulebookPath(csv.toString()));
+
+        process(List.of(log("WARN", "1.1.1.1")));
+        // No rulebook entries → everything unknown
+        assertEquals(1, analyzer.getUnknownLogs().size());
+        assertTrue(analyzer.getFlaggedEntries().isEmpty());
+    }
+
+    @Test
+    void checkLevel_countsAnyKnownSeverityNotJustHardcodedOnes() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nDEBUG,1\nCRITICAL,5\nNOTICE,2\n");
+
+        process(List.of(
+                log("WARN",     "1.1.1.1"),
+                log("DEBUG",    "2.2.2.2"),
+                log("WARN",     "3.3.3.3"),
+                log("CRITICAL", "4.4.4.4"),
+                log("NOTICE",   "5.5.5.5")
+        ));
 
         Map<String, Integer> stats = analyzer.getStats();
-        assertEquals(0, stats.get("WARN"));
-        assertEquals(0, stats.get("INFO"));
-        assertEquals(0, stats.get("ERROR"));
-        assertEquals(0, stats.get("ALERT"));
-        assertTrue(analyzer.getFlaggedEntries().isEmpty());
-        assertTrue(analyzer.getUnknownLogs().isEmpty());
+        assertEquals(2, stats.get("WARN"));
+        assertEquals(1, stats.get("DEBUG"));
+        assertEquals(1, stats.get("CRITICAL"));
+        assertEquals(1, stats.get("NOTICE"));
     }
 
     @Test
-    void checkLevel_multipleSameSeverityAccumulate() {
-        List<String> valid = List.of(
-                log("WARN", "1.1.1.1"),
-                log("WARN", "2.2.2.2"),
-                log("WARN", "3.3.3.3")
-        );
-        List<String> numbered = List.of("1", "2", "3");
+    void checkLevel_flagsOnlyScoresGreaterOrEqualThree() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nDEBUG,1\nCRITICAL,5\nNOTICE,2\n");
 
-        analyzer.checkLevel(valid, numbered);
-
-        assertEquals(3, analyzer.getStats().get("WARN"));
-        assertEquals(3, analyzer.getFlaggedEntries().size());
-    }
-
-    @Test
-    void checkLevel_flaggedLogsKeepInsertionOrder() {
-        List<String> valid = List.of(
-                log("WARN",  "1.1.1.1"),
-                log("ERROR", "2.2.2.2"),
-                log("ALERT", "3.3.3.3")
-        );
-        List<String> numbered = List.of("1", "2", "3");
-
-        analyzer.checkLevel(valid, numbered);
+        process(List.of(
+                log("WARN",     "1.1.1.1"),   // flagged (3)
+                log("DEBUG",    "2.2.2.2"),   // not flagged (1)
+                log("CRITICAL", "3.3.3.3"),   // flagged (5)
+                log("NOTICE",   "4.4.4.4")    // not flagged (2)
+        ));
 
         List<String> flagged = analyzer.getFlaggedEntries();
-        assertEquals(log("WARN",  "1.1.1.1"), flagged.get(0));
-        assertEquals(log("ERROR", "2.2.2.2"), flagged.get(1));
-        assertEquals(log("ALERT", "3.3.3.3"), flagged.get(2));
+        assertEquals(2, flagged.size());
+        assertTrue(flagged.contains(log("WARN", "1.1.1.1")));
+        assertTrue(flagged.contains(log("CRITICAL", "3.3.3.3")));
+        assertFalse(flagged.contains(log("DEBUG", "2.2.2.2")));
+        assertFalse(flagged.contains(log("NOTICE", "4.4.4.4")));
     }
 
     @Test
-    void suspiciousIPs_countsDuplicateIps() {
-        List<String> valid = List.of(
-                log("WARN",  "1.1.1.1"),
-                log("ERROR", "2.2.2.2"),
-                log("WARN",  "1.1.1.1"),
-                log("ALERT", "1.1.1.1")
-        );
-        List<String> numbered = List.of("1", "2", "3", "4");
+    void checkLevel_unknownSeverityGoesToUnknownLogsUsingNumberedVersion() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
+
+        List<String> valid = List.of(log("BANANA", "1.1.1.1"));
+        List<String> numbered = List.of("Line #7: BANANA entry");
 
         analyzer.checkLevel(valid, numbered);
+
+        assertTrue(analyzer.getFlaggedEntries().isEmpty());
+        assertEquals(1, analyzer.getUnknownLogs().size());
+        assertEquals("Line #7: BANANA entry", analyzer.getUnknownLogs().get(0));
+        assertFalse(analyzer.getStats().containsKey("BANANA"));
+    }
+
+    @Test
+    void checkLevel_severityIsTrimmedBeforeLookup() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
+
+        process(List.of("t|  WARN  |1.1.1.1|x|y"));
+
+        assertEquals(1, analyzer.getFlaggedEntries().size());
+        assertEquals(1, analyzer.getStats().get("WARN"));
+    }
+
+
+
+    @Test
+    void checkLevel_emptyInputProducesNothing() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
+
+        analyzer.checkLevel(Collections.emptyList(), Collections.emptyList());
+
+        assertTrue(analyzer.getFlaggedEntries().isEmpty());
+        assertTrue(analyzer.getUnknownLogs().isEmpty());
+        assertTrue(analyzer.getStats().isEmpty());
+    }
+
+    @Test
+    void checkLevel_preservesInsertionOrderOfFlaggedLogs() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nERROR,4\nALERT,5\n");
+
+        String l1 = log("WARN",  "1.1.1.1");
+        String l2 = log("ERROR", "2.2.2.2");
+        String l3 = log("ALERT", "3.3.3.3");
+        process(List.of(l1, l2, l3));
+
+        List<String> flagged = analyzer.getFlaggedEntries();
+        assertEquals(l1, flagged.get(0));
+        assertEquals(l2, flagged.get(1));
+        assertEquals(l3, flagged.get(2));
+    }
+
+    @Test
+    void getStats_isEmptyBeforeProcessing() {
+        assertTrue(analyzer.getStats().isEmpty());
+    }
+
+    @Test
+    void getStats_returnsDescendingOrderByCount() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nDEBUG,1\nCRITICAL,5\n");
+
+        process(List.of(
+                log("WARN", "1.1.1.1"),
+                log("WARN", "2.2.2.2"),
+                log("WARN", "3.3.3.3"),
+                log("DEBUG", "4.4.4.4"),
+                log("DEBUG", "5.5.5.5"),
+                log("CRITICAL", "6.6.6.6")
+        ));
+
+        List<String> keys = new ArrayList<>(analyzer.getStats().keySet());
+        assertEquals("WARN",     keys.get(0));   // count 3
+        assertEquals("DEBUG",    keys.get(1));   // count 2
+        assertEquals("CRITICAL", keys.get(2));   // count 1
+    }
+
+    @Test
+    void suspiciousIPs_countsDuplicateIpsAmongFlaggedLogs() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nERROR,4\n");
+
+        process(List.of(
+                log("WARN",  "1.1.1.1"),
+                log("WARN",  "1.1.1.1"),
+                log("ERROR", "1.1.1.1"),
+                log("ERROR", "2.2.2.2")
+        ));
+
         analyzer.suspiciousIPs();
 
         Map<String, Integer> counts = analyzer.getSuspiciousIp();
@@ -158,14 +219,14 @@ public class RulebookAnalyzerTest {
     }
 
     @Test
-    void suspiciousIPs_ignoresInfoLogs() {
-        List<String> valid = List.of(
-                log("INFO", "9.9.9.9"),
-                log("WARN", "1.1.1.1")
-        );
-        List<String> numbered = List.of("1", "2");
+    void suspiciousIPs_ignoresNonFlaggedLogs() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\nDEBUG,1\n");
 
-        analyzer.checkLevel(valid, numbered);
+        process(List.of(
+                log("DEBUG", "9.9.9.9"),  // not flagged
+                log("WARN",  "1.1.1.1")   // flagged
+        ));
+
         analyzer.suspiciousIPs();
 
         Map<String, Integer> counts = analyzer.getSuspiciousIp();
@@ -174,65 +235,53 @@ public class RulebookAnalyzerTest {
     }
 
     @Test
-    void suspiciousIPs_emptyWhenNoFlaggedLogs() {
-        analyzer.checkLevel(List.of(log("INFO", "1.1.1.1")), List.of("1"));
+    void suspiciousIPs_emptyWhenNoFlaggedLogs() throws IOException {
+        loadRulebook("level,severity_score\nDEBUG,1\n");
+
+        process(List.of(log("DEBUG", "1.1.1.1")));
         analyzer.suspiciousIPs();
 
         assertTrue(analyzer.getSuspiciousIp().isEmpty());
     }
 
     @Test
-    void getSuspiciousIp_returnsDescendingOrderByCount() {
-        List<String> valid = List.of(
+    void getSuspiciousIp_returnsDescendingOrderByCount() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
+
+        process(List.of(
                 log("WARN", "1.1.1.1"),
                 log("WARN", "2.2.2.2"),
                 log("WARN", "2.2.2.2"),
                 log("WARN", "2.2.2.2"),
                 log("WARN", "3.3.3.3"),
                 log("WARN", "3.3.3.3")
-        );
-        List<String> numbered = List.of("1", "2", "3", "4", "5", "6");
+        ));
 
-        analyzer.checkLevel(valid, numbered);
         analyzer.suspiciousIPs();
 
         List<String> orderedIps = new ArrayList<>(analyzer.getSuspiciousIp().keySet());
-        // 2.2.2.2 -> 3, 3.3.3.3 -> 2, 1.1.1.1 -> 1
         assertEquals(List.of("2.2.2.2", "3.3.3.3", "1.1.1.1"), orderedIps);
     }
 
     @Test
-    void getStats_containsAllFourCategoriesEvenWhenEmpty() {
-        Map<String, Integer> stats = analyzer.getStats();
+    void getFlaggedEntries_returnsTheFlaggedLogs() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
 
-        assertTrue(stats.containsKey("INFO"));
-        assertTrue(stats.containsKey("WARN"));
-        assertTrue(stats.containsKey("ERROR"));
-        assertTrue(stats.containsKey("ALERT"));
-        // No logs processed yet → all zero
-        assertEquals(0, stats.get("INFO"));
-        assertEquals(0, stats.get("WARN"));
-        assertEquals(0, stats.get("ERROR"));
-        assertEquals(0, stats.get("ALERT"));
+        String l = log("WARN", "1.1.1.1");
+        process(List.of(l));
+
+        assertEquals(1, analyzer.getFlaggedEntries().size());
+        assertEquals(l, analyzer.getFlaggedEntries().get(0));
     }
 
     @Test
-    void getFlaggedEntries_returnsFlaggedLogs() {
-        List<String> valid = List.of(log("WARN", "1.1.1.1"));
-        analyzer.checkLevel(valid, List.of("1"));
+    void getUnknownLogs_returnsTheNumberedVersions() throws IOException {
+        loadRulebook("level,severity_score\nWARN,3\n");
 
-        List<String> flagged = analyzer.getFlaggedEntries();
-        assertEquals(1, flagged.size());
-        assertEquals(log("WARN", "1.1.1.1"), flagged.get(0));
-    }
+        List<String> valid = List.of(log("NOPE", "1.1.1.1"));
+        List<String> numbered = List.of("numbered-1");
+        analyzer.checkLevel(valid, numbered);
 
-    @Test
-    void getUnknownLogs_returnsNumberedVersion() {
-        List<String> valid = List.of(log("BLAH", "1.1.1.1"));
-        analyzer.checkLevel(valid, List.of("numbered-1"));
-
-        List<String> unknown = analyzer.getUnknownLogs();
-        assertEquals(1, unknown.size());
-        assertEquals("numbered-1", unknown.get(0));
+        assertEquals(List.of("numbered-1"), analyzer.getUnknownLogs());
     }
 }

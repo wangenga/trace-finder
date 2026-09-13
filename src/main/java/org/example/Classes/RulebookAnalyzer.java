@@ -16,12 +16,7 @@ public class RulebookAnalyzer {
     //Gives each line a score and stores that info in a dataset. eg a multidimensional array or sth
     //Hands this data to the main class.
 
-
-
-
-
     //CORRECTLY STRUCTURED LOGS HAVE 4 DELIMETERS. I NEED THE CHARACTERS BETWEEN DELIMETER 1 AND 2.
-
     List<String> flaggedLogs = new ArrayList<>();
     List<String> unknownLogs = new ArrayList<>();
     List<String> flaggedIpsList = new ArrayList<>();
@@ -30,118 +25,176 @@ public class RulebookAnalyzer {
     Map<String, Integer> flaggedIPsCount = new HashMap<>();
     Map<String, Integer> stats = new HashMap<>();
 
+    Map<String, Integer> rulebookContent = new HashMap<>();
 
-    int warnCount = 0;
-    int infoCount = 0;
-    int errorCount = 0;
-    int alertCount = 0;
 
-    public void checkLevel (List<String> validEntries, List<String> numberedValidEntries){
+    String rulebookPath;
+    public void getRulebookPath(String path) {
+        rulebookPath = path;
+        readRulebook();
+        //READ EVERY LINE, STORE THE VALUES IN A MAP.
+        //COMPARE EVERY LOG TO THE KEYS, BY LOOPING THROUGH THE MAP PERHAPS
+        // IF A LOG'S SEVERITY EXISTS, AS A KEY, THEN WE CHECK THE VALUE ATTACHED TO THAT KEY.
+        //IF THE VALUE >= 3, THE LOG IS FLAGGED.
 
+        //ELSE IF A LOG'S SEVERITY DOES NOT EXIST AS A KEY, THEN WE MARK IT AS UNKNOWN.
+        //I THINK THE REST OF THE LOGIC IS SAME
+    }
+
+    public void readRulebook() {
+        rulebookContent.clear();
+
+        if (rulebookPath == null || rulebookPath.isBlank()) {
+            throw new IllegalArgumentException("Rulebook path has not been set.");
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(rulebookPath))) {
+
+            // 1. Read and validate header
+            String header = br.readLine();
+            if (header == null) {
+                System.out.println("Rulebook is empty.");
+                return;
+            }
+
+            List<String> expectedHeaders = Arrays.asList("level", "severity_score");
+            List<String> actualHeaders = Arrays.stream(header.split(","))
+                    .map(String::trim)
+                    .toList();
+
+            if (!expectedHeaders.equals(actualHeaders)) {
+                throw new IllegalArgumentException(
+                        "Rulebook headers must be 'level,severity_score'. Found: " + actualHeaders);
+            }
+
+            // 2. Read each row and put into the map
+            String line;
+            int lineNumber = 1; // header was line 1
+            while ((line = br.readLine()) != null) {
+                lineNumber++;
+
+                if (line.isBlank()) continue; // skip empty lines
+
+                String[] parts = line.split(",");
+                if (parts.length < 2) {
+                    System.out.println("Skipping malformed line " + lineNumber + ": " + line);
+                    continue;
+                }
+
+                String level = parts[0].trim();
+                String scoreStr = parts[1].trim();
+
+                try {
+                    int severityScore = Integer.parseInt(scoreStr);
+                    rulebookContent.put(level, severityScore);
+                } catch (NumberFormatException e) {
+                    System.out.println("Skipping line " + lineNumber
+                            + " — severity_score is not a number: " + scoreStr);
+                }
+            }
+
+            System.out.println("Rulebook loaded: " + rulebookContent);
+
+        } catch (IOException e) {
+            System.out.println("Could not read rulebook at " + rulebookPath);
+            e.printStackTrace();
+        }
+    }
+
+    public void checkLevel(List<String> validEntries, List<String> numberedValidEntries) {
 
         for (int i = 0; i < validEntries.size(); i++) {
             String currentLog = validEntries.get(i);
 
-            int delimeter1Index = currentLog.indexOf("|" );
-            int delimeter2Index = currentLog.indexOf("|" , delimeter1Index + 1);
+            int delimeter1Index = currentLog.indexOf("|");
+            int delimeter2Index = currentLog.indexOf("|", delimeter1Index + 1);
 
             String severity = currentLog.substring(delimeter1Index + 1, delimeter2Index).trim();
-            if (severity.equals("WARN") || severity.equals("ERROR") || severity.equals("ALERT")){
-                flaggedLogs.add(currentLog);
-                if (severity.equals("WARN")){
-                    warnCount ++;
+            if (rulebookContent.containsKey(severity)) {
+                // Count EVERY known severity, whatever its name
+                stats.merge(severity, 1, Integer::sum); //increment the count for severity by 1, creating it at 1 if it doesn't exist yet.
+
+                int score = rulebookContent.get(severity);
+                if (score >= 3) {
+                    flaggedLogs.add(currentLog);
                 }
-                else if (severity.equals("ERROR")){
-                    errorCount ++;
-                }
-                else {
-                    alertCount ++;
-                }
-            }
-            else if (severity.equals("INFO")){
-                infoCount++;
-            }
-            else {
-                //Since numbered valid logs and valid logs are the same size, we can just replace the current log with the
-                //log at numberedValidLog[i] and add that into unknownLog.
-                currentLog = numberedValidEntries.get(i);
-                unknownLogs.add(currentLog);
+            } else {
+                unknownLogs.add(numberedValidEntries.get(i));
             }
 
-        }
-        System.out.println("The flagged logs are: ");
-        for (String log : flaggedLogs) {
-            System.out.println(log);
-        }
-        System.out.println("The unknown logs are: ");
-        for (String log : unknownLogs) {
-            System.out.println(log);
-        }
+            System.out.println("The flagged logs are: ");
+            for (String log : flaggedLogs) {
+                System.out.println(log);
+            }
+            System.out.println("The unknown logs are: ");
+            for (String log : unknownLogs) {
+                System.out.println(log);
+            }
 
-        System.out.println("Warn: " + warnCount);
-        System.out.println("Info: " + infoCount);
-        System.out.println("Error: " + errorCount);
-        System.out.println("Alert: " + alertCount);
+        }
     }
 
 
-    public void suspiciousIPs (){
-        for (String flaggedLog : flaggedLogs){
-            int d1 = flaggedLog.indexOf("|");
-            int d2 = flaggedLog.indexOf("|", d1 + 1);
-            int d3 = flaggedLog.indexOf("|", d2 + 1);
+        public void suspiciousIPs () {
+            for (String flaggedLog : flaggedLogs) {
+                int d1 = flaggedLog.indexOf("|");
+                int d2 = flaggedLog.indexOf("|", d1 + 1);
+                int d3 = flaggedLog.indexOf("|", d2 + 1);
 
-            String flaggedIP = flaggedLog.substring(d2 + 1, d3).trim();
-            //We add the IP adresses to a normal list and to a unique list, and count how many times a unique record appears:
-            //**Probably not the most optimal solution.
-            flaggedIPsUnique.add(flaggedIP);
-            flaggedIpsList.add(flaggedIP);
+                String flaggedIP = flaggedLog.substring(d2 + 1, d3).trim();
+                //We add the IP adresses to a normal list and to a unique list, and count how many times a unique record appears:
+                //**Probably not the most optimal solution.
+                flaggedIPsUnique.add(flaggedIP);
+                flaggedIpsList.add(flaggedIP);
+            }
+
+            for (String ip : flaggedIPsUnique) {
+                int count = Collections.frequency(flaggedIpsList, ip);
+                flaggedIPsCount.put(ip, count);
+            }
+
+
+            System.out.println("The flagged IPs are: ");
+            for (String flaggedIp : flaggedIPsUnique) {
+                System.out.println(flaggedIp);
+            }
+
+            System.out.println(flaggedIPsCount);
         }
 
-        for (String ip : flaggedIPsUnique){
-            int count = Collections.frequency(flaggedIpsList, ip);
-            flaggedIPsCount.put(ip, count);
+        public Map<String, Integer> getStats() {
+            Map<String, Integer> sorted = stats.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .collect(java.util.stream.Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (a, b) -> a,
+                            LinkedHashMap::new   // preserves sorted order
+                    ));
+
+            System.out.println("Stats (descending): " + sorted);
+            return sorted;
         }
 
+        public Map<String, Integer> getSuspiciousIp () {
+            Map<String, Integer> sortedFlaggedIPsCount = flaggedIPsCount.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .collect(java.util.stream.Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (oldValue, newValue) -> oldValue, // Merge function (not needed here but required by syntax)
+                            LinkedHashMap::new                // Guarantees the sorted order is kept
+                    ));
 
-        System.out.println("The flagged IPs are: ");
-        for (String flaggedIp : flaggedIPsUnique){
-            System.out.println(flaggedIp);
+            System.out.println("Sorted map: " + sortedFlaggedIPsCount);
+            return sortedFlaggedIPsCount;
         }
 
-        System.out.println(flaggedIPsCount);
+        public List<String> getFlaggedEntries () {
+            return flaggedLogs;
+        }
+        public List<String> getUnknownLogs () {
+            return unknownLogs;
+        }
     }
-
-    //Move valid file path logic to commandValidator
-    public Map<String, Integer> getStats(){
-        stats.put("INFO", infoCount);
-        stats.put("WARN", warnCount);
-        stats.put("ERROR", errorCount);
-        stats.put("ALERT", alertCount);
-
-        System.out.println(stats);
-        return stats;
-    }
-
-    public Map<String,Integer> getSuspiciousIp (){
-        Map<String, Integer> sortedFlaggedIPsCount = flaggedIPsCount.entrySet().stream()
-                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                .collect(java.util.stream.Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (oldValue, newValue) -> oldValue, // Merge function (not needed here but required by syntax)
-                        LinkedHashMap::new                // Guarantees the sorted order is kept
-                ));
-
-        System.out.println("Sorted map: " + sortedFlaggedIPsCount);
-        return sortedFlaggedIPsCount;
-    }
-
-    public List<String> getFlaggedEntries (){
-        return flaggedLogs;
-    }
-    public List<String> getUnknownLogs(){
-        return unknownLogs;
-    }
-}
 

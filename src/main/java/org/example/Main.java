@@ -58,7 +58,11 @@ public class Main {
 
             //We hand over index 0 to LogsReader, 1 to CommandValidator and 2 to CommandValidator.
         commandValidator.getRulebookPath(args[1]);
-        commandValidator.validRulebook();
+        boolean isRulebookValid = commandValidator.validRulebook();
+        //If the rulebook path is valid, then we hand it over to RulebookAnalyzer:
+        if (isRulebookValid){
+            rulebookAnalyzer.getRulebookPath(args[1]);
+        }
 
         LogsReader.ParseResult result = null;
         try {
