@@ -17,7 +17,7 @@ public class RulebookAnalyzer {
     //Hands this data to the main class.
 
     //CORRECTLY STRUCTURED LOGS HAVE 4 DELIMETERS. I NEED THE CHARACTERS BETWEEN DELIMETER 1 AND 2.
-    List<String> flaggedLogs = new ArrayList<>();
+    List<Map.Entry<String, Integer>> flaggedLogs = new ArrayList<>();
     List<String> unknownLogs = new ArrayList<>();
     List<String> flaggedIpsList = new ArrayList<>();
     Set<String> flaggedIPsUnique = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
@@ -116,27 +116,28 @@ public class RulebookAnalyzer {
 
                 int score = rulebookContent.get(severity);
                 if (score >= 3) {
-                    flaggedLogs.add(currentLog);
+                    flaggedLogs.add(Map.entry(currentLog, score));
                 }
             } else {
                 unknownLogs.add(numberedValidEntries.get(i));
             }
 
-            System.out.println("The flagged logs are: ");
-            for (String log : flaggedLogs) {
-                System.out.println(log);
-            }
-            System.out.println("The unknown logs are: ");
-            for (String log : unknownLogs) {
-                System.out.println(log);
-            }
+        }
 
+        System.out.println("The flagged logs are: ");
+        for (Map.Entry<String, Integer> log : flaggedLogs) {
+            System.out.println(log.getKey());
+        }
+        System.out.println("The unknown logs are: ");
+        for (String log : unknownLogs) {
+            System.out.println(log);
         }
     }
 
 
         public void suspiciousIPs () {
-            for (String flaggedLog : flaggedLogs) {
+            for (Map.Entry<String, Integer> entry : flaggedLogs) {
+                String flaggedLog = entry.getKey();
                 int d1 = flaggedLog.indexOf("|");
                 int d2 = flaggedLog.indexOf("|", d1 + 1);
                 int d3 = flaggedLog.indexOf("|", d2 + 1);
@@ -191,7 +192,10 @@ public class RulebookAnalyzer {
         }
 
         public List<String> getFlaggedEntries () {
-            return flaggedLogs;
+            return flaggedLogs.stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .toList();
         }
         public List<String> getUnknownLogs () {
             return unknownLogs;

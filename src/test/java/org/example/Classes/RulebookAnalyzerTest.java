@@ -171,9 +171,9 @@ public class RulebookAnalyzerTest {
         process(List.of(l1, l2, l3));
 
         List<String> flagged = analyzer.getFlaggedEntries();
-        assertEquals(l1, flagged.get(0));
-        assertEquals(l2, flagged.get(1));
-        assertEquals(l3, flagged.get(2));
+        assertEquals(l3, flagged.get(0)); // ALERT, score 5 — highest, comes first
+        assertEquals(l2, flagged.get(1)); // ERROR, score 4 — middle
+        assertEquals(l1, flagged.get(2)); // WARN, score 3 — lowest, comes last
     }
 
     @Test
