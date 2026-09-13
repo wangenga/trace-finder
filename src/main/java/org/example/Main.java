@@ -59,9 +59,10 @@ public class Main {
         commandValidator.getRulebookPath(args[1]);
         boolean isRulebookValid = commandValidator.validRulebook();
         //If the rulebook path is valid, then we hand it over to RulebookAnalyzer:
-        if (isRulebookValid){
-            rulebookAnalyzer.getRulebookPath(args[1]);
+        if (!isRulebookValid){
+            System.exit(1);
         }
+        rulebookAnalyzer.getRulebookPath(args[1]);
 
         LogsReader.ParseResult result = null;
         try {
