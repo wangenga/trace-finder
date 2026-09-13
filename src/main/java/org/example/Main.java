@@ -43,7 +43,6 @@ public class Main {
     public static void main(String[] args) throws IOException {
         CommandValidator commandValidator = new CommandValidator();
         RulebookAnalyzer rulebookAnalyzer = new RulebookAnalyzer();
-        ReportGenerator reportGenerator = new ReportGenerator();
         //Count no. of arguments.
         if (args.length != 3){
             System.out.println("Ensure the number of arguments are 3");
@@ -82,7 +81,7 @@ public class Main {
 
             //Getting the actual line numbers for every log
             List<String> numberedFormattedLogs = result.validEntries().stream()
-                    .map(entry -> String.format("Line %s: | %s | %s | %s | %s | %s",
+                    .map(entry -> String.format("Line %s: %s | %s | %s | %s | %s",
                             entry.lineNumber(), //Carries the OG line number.
                             entry.timestamp(),
                             entry.level(),
@@ -96,16 +95,21 @@ public class Main {
             System.out.println("Error reading log file: " + e.getMessage());
             System.exit(1);
         }
-        System.out.println("\n----- REPORT SKELETON PREVIEW -----\n");
-        System.out.println(ReportGenerator.buildReport(result.malformedLines()));
 
 
-
-        rulebookAnalyzer.getStats();
         rulebookAnalyzer.suspiciousIPs();
-        rulebookAnalyzer.getSuspiciousIp();
 
-        
+        String reportText = ReportGenerator.buildReport(
+            rulebookAnalyzer.getStats(),
+            rulebookAnalyzer.getFlaggedEntries(),
+            rulebookAnalyzer.getSuspiciousIp(),
+            rulebookAnalyzer.getUnknownLogs(),
+            result.malformedLines()
+        );
+
+        System.out.println("\n----- REPORT PREVIEW -----\n");
+        System.out.println(reportText); 
+
         File report = new File(args[2]);
 
         if (report.exists() && report.isFile()) {
@@ -113,8 +117,7 @@ public class Main {
         }
 
         commandValidator.getReportPath(args[2]);
-        commandValidator.writeReport(ReportGenerator.buildReport(result.malformedLines()));
-        
+        commandValidator.writeReport(reportText);
     }
 
 }
